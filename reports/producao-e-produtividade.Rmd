@@ -1,9 +1,11 @@
 ---
 title: "Regressão linear na prática"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-```{r warning=FALSE, echo=FALSE}
+```{r warning=FALSE, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(broom)
 library(modelr)
@@ -106,7 +108,9 @@ Produza aqui a sua versão desse texto, portanto:
 
 -----
 
-*SUBSTITUA ESSE TEXTO*
+**A regressão foi utilizada para analisar se a quantidade de docentes permanentes tem uma associação significativa com a produção. Os resultados da regressão indicam que um modelo com um preditor no formato Produção = 4.81337 * Docentes Permanentes - 41.27309 explica 81,46% da variância da variável resposta (R2 = 0.8145886).**
+
+**A variável de Docentes Permanentes, medida pela quantidade de docentes em cada universidade, tem uma relação significativa com o erro (b = [4.269955; 5.356786], IC com 95%). O aumento de 1 unidade na variável Docentes Permanentes produz uma mudança de 4.81337 na Produção.**
 
 -----
 
@@ -114,7 +118,9 @@ Dito isso, o que significa a relação que você encontrou na prática para ente
 
 -----
 
-*SUBSTITUA ESSE TEXTO PELA SUA DISCUSSÃO DOS RESULTADOS*
+**Isso significa que existe uma relação, não necessáriamente de causalidade, entre a quantidade de docentes permanentes em um programa de pós graduação de ciência da computação e a produção de artigos em programas de pós, onde quanto maior a quantidade de docentes permanentes, maior a quantidade de artigos.**
+
+**Talvez a forte relação encontrada entre as variáveis seja explicada pela pressão sobre o corpo docente para publicar, visto que a qualidade do curso é medida pela CAPES através de algumas variáveis, incluindo a produção científica, como mostra [este documento](https://www.capes.gov.br/images/stories/download/artigos/Artigo_18_07_07.pdf).** 
 
 -----
 
@@ -156,7 +162,13 @@ Considerando agora esses três fatores, o que podemos dizer sobre como cada um d
 
 -----
 
-**EXPLICAÇÃO**: *Substitua esse texto por texto feito tal qual o que usamos com uma variável*
+**A regressão múltipla foi utilizada para analisar se a quantidade de docentes permanentes, mestrados e doutorados tem uma associação significativa com a produção. Os resultados da regressão indicam que um modelo com um preditor no formato Produção = 3.4997112\*Docentes Permanentes + 1.0007711\*Doutorados - 0.1949515\*Mestrados - 14.3663077 explica 87,07% da variância da variável resposta (R2 = 0.8706642). **
+
+**A variável de Docentes Permanentes, medida pela quantidade de docentes em cada universidade, tem uma relação significativa com a variável dependente, com o erro (b = [2.5827257; 4.4166967], IC com 95%), assim como a variável Mestrados, medida pela quantidade de alunos de mestrado tem uma relação significativa com a variável dependente, com o erro (b = [-0.3577316; -0.0321714], IC com 95%), como também a variável Doutorados, medida pela quantidade de alunos de doutorado tem uma relação significativa com a variável alvo, com o erro (b = [0.6355112; 1.3660309], IC com 95%). O aumento de 1 unidade na variável Docentes Permanentes produz uma mudança positiva de 3.4997112 na Produção, assim como o aumento de 1 unidade na variável de Doutorados produz uma mudança positiva de 1.0007711 na Produção, enquanto o aumento de 1 unidade na variável Mestrados produz uma mudança negativa de 0.1949515 na Produção.**
+
+**Desta forma, o modelo encontrou uma relação significativa entre todas as variáveis independentes do modelo e a variável dependente, onde a relação foi positiva entre a variável Docentes Permanentes e Produção, positiva entre a variável Doutorados e a Produção, mas foi negativa entre variável Mestrados e a Produção.**
+
+**O segundo modelo explica mais que o primeiro, visto que tanto o R2 quanto o R2 ajustado foram maiores no segundo.**
 
 -----
 
@@ -166,3 +178,72 @@ Considerando agora esses três fatores, o que podemos dizer sobre como cada um d
 Diferente de medirmos produção (total produzido), é medirmos produtividade (produzido / utilizado). Abaixo focaremos nessa análise. Para isso crie um modelo que investiga como um conjunto de fatores que você julga que são relevantes se relacionam com a produtividade dos programas. Crie um modelo que avalie como _pelo menos 3 fatores_ se relacionam com a produtividade de um programa. Pode reutilizar fatores que já definimos e analizamos para produção. Mas cuidado para não incluir fatores que sejam função linear de outros já incluídos (ex: incluir A, B e um tercero C=A+B)
 
 Produza abaixo o modelo e um texto que comente (i) o modelo, tal como os que fizemos antes, e (ii) as implicações - o que aprendemos sobre como funcionam programas de pós no brasil?.
+
+**Para criar nosso novo modelo, utilizaremos três variáveis, similares às utilizadas anteriormente, são elas:**
+
+* **Total docentes:   Docentes colaboradores + Docentes permanentes + Docentes visitantes**
+* **Total discentes:  Quantidade de alunos de doutorado + Quantidade de alunos de mestrado**
+* **Tem doutorado:    Se existe ou não doutorado no programa **
+
+**Vejamos a distribuição destas variáveis:**
+
+```{r}
+cacc_modelo <- cacc %>% 
+    mutate(
+        total_docentes = `Docentes colaboradores` + `Docentes permanentes` + `Docentes visitantes`,
+        total_discentes = mestrados + doutorados,
+        tem_doutorado = ifelse(`Tem doutorado` == "Não", "Não", "Sim")
+    ) %>% 
+    select(produtividade, total_docentes, total_discentes, tem_doutorado)
+
+cacc_modelo %>% 
+    ggplot(aes(x = total_docentes)) +
+        geom_histogram(binwidth = 5)
+
+cacc_modelo %>% 
+    ggplot(aes(x = total_discentes)) +
+        geom_histogram(binwidth = 50)
+
+cacc_modelo %>% 
+    ggplot(aes(x = tem_doutorado)) +
+        geom_bar()
+```
+
+**Vemos que as variáveis são mais concentradas em valores mais baixos tanto para docentes quanto para discentes, existindo poucos observações que se destacam das demais. A quantidade de cursos que tem doutorado é próxima das que não tem, apesar de existirem mais cursos que não tem doutorado do que cursos que tem.**
+
+**Visualizemos se existe relação entre as variáveis independentes do modelo que criaremos e a dependente.**
+
+```{r}
+cacc_modelo %>% 
+    ggplot(aes(x = total_docentes, y = produtividade)) +
+        geom_point()
+
+cacc_modelo %>% 
+    ggplot(aes(x = total_discentes, y = produtividade)) +
+        geom_point()
+
+cacc_modelo %>% 
+    ggplot(aes(x = tem_doutorado, y = produtividade)) +
+        geom_jitter()
+```
+
+**Parece existir uma relação linear do total de discentes com a produtividade, se considerarmos cursos com até 300 discentes, como também parece existir uma relação linear entre o total de docentes e a produtividade, se considerarmos cursos com até 60 docentes e a concentração da produtividade dos cursos que tem doutorado é maior dos que não tem.**
+
+**Criando o modelo:**
+
+```{r}
+modelo3 = lm(produtividade ~ total_docentes + total_discentes + tem_doutorado, data = cacc_modelo)
+
+tidy(modelo3, conf.int = TRUE, conf.level = 0.95)
+glance(modelo3)
+```
+
+**A regressão múltipla foi utilizada para analisar se a quantidade de docentes, discentes e se o curso tem doutorado tem uma associação significativa com a produtividade. Os resultados da regressão indicam que um modelo com um preditor no formato Produtividade = 0.010166466\*Total_Docentes + 0.002659466\*Total_Discentes + 1.409964436\*Tem_Doutorado + 1.213281785 explica 47,63% da variância da variável resposta (R2 = 0.4763424).**
+
+**A variável total_docentes, medida pela quantidade de docentes em cada universidade, não tem uma relação significativa com a variável dependente, visto o erro (b = [-0.024259786; 0.04459271], IC com 95%), assim como a variável total_discentes, medida pela quantidade de discentes em cada universidade, não tem uma relação significativa com a variável dependente, visto o erro (b = [-0.002812107; 0.008131039], IC com 95%), enquanto a variável tem_doutorado, medida com sim caso tenha doutorado no curso e não caso contrário, tem uma relação significativa com a variável alvo, com o erro (b = [0.865722005; 1.954206867], IC com 95%).**
+
+**O modelo calcula que o aumento de 1 unidade na variável Total_Docentes produz uma mudança positiva de 0.010166466 na Produtividade, assim como o aumento de 1 unidade na variável Total_Discentes produz uma mudança positiva de 0.002659466 na Produtividade, como também o aumento de 1 unidade na variável Tem_Doutorado produz uma mudança positiva de 1.409964436 na Produtividade. **
+
+**Com isso, aprendemos que um programa de pós graduação em ciência da computação que tem doutorado tem relação positiva com a produtividade de artigos, que faz sentido, visto que na tese de doutorado deve ser proposta uma ideia científica original, conteúdo propício para publicação. Aprendemos também o modelo não identifica uma relação linear entre a quantidade de docentes e a produtividade, assim como entre a quantidade de discentes e a produtividade. Esta ausência de associação linear pode ser causada tanto pelos valores extremos, como por relações não lineares, como também pode não existir relação entre as variáveis de fato.**
+
+___
